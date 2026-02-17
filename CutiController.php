@@ -26,84 +26,6 @@ class CutiController
         $this->modelJabatan = new JabatanModel($db);
     }
 
-    public function formAjukanCuti()
-    {
-        if (!isset($_SESSION['user_id'])) {
-            header("Location: login");
-            exit;
-        }
-
-        $user_id = $_SESSION['user_id'];
-        $kodeJabatan = $_SESSION['jabatan'];
-        $kepala_id = $_SESSION['kepala_balai'];
-        $ketua_id = $_SESSION['atasan'];
-
-        $jabatan_user = $this->modelJabatan->getNamaJabatanByKode($kodeJabatan);
-        $kepala_balai = $this->modelUser->getKepalaBalaiById($kepala_id);
-        $ketua_tim = $this->modelUser->getKetuaTimById($ketua_id);
-        
-        if (!$kepala_balai) {
-            die("Data kepala balai tidak ditemukan. Hubungi admin.");
-        }
-
-        if (!$ketua_tim) {
-            die("Data ketua tim tidak ditemukan. Hubungi admin.");
-        }
-
-        $tipeCutiList = $this->tipeCutiModel->getTipeCutiList();
-        if (!$tipeCutiList) {
-            die("Tipe cuti tidak tersedia. Hubungi admin.");
-        }
-
-        $sisaCuti = $this->cutiModel->getLeaveRemaining($user_id);
-
-        require_once __DIR__ . '/../views/cuti/create_cuti.php';
-    }
-
-    public function ajukanCuti()
-    {
-        if ($_SERVER["REQUEST_METHOD"] == "POST") {
-
-            $user_id = $_SESSION['user_id'];
-            $jenis_cuti_id = $_POST['tipeCuti'];
-            $atasan_id = $_POST['atasan'];
-            $ketua_id = $_POST['ketua'];
-            $from_date = $_POST['dari_tanggal'];
-            $to_date = $_POST['sampai_tanggal'];
-            $alamat = $_POST['alamat'];
-            $deskripsi = $_POST['deskripsi'];
-            $jabatan = $_SESSION['jabatan'];
-
-            $result = $this->cutiModel->insertCuti(
-                $user_id, $jenis_cuti_id, $atasan_id, 
-                $ketua_id, $from_date, $to_date, $alamat, 
-                $deskripsi, $jabatan);
-
-            if ($result === true) {
-                $_SESSION['success'] = "Pengajuan cuti berhasil dikirim.";
-            } else {
-                $_SESSION['error'] = "Terjadi kesalahan: " . $result;
-            }
-            session_write_close();
-
-            header("Location: ajukan_cuti");
-            exit();
-        }
-    }
-
-    public function leaveHistory()
-    {
-        if (!isset($_SESSION['user_id'])) {
-            header("Location: login");
-            exit();
-        }
-
-        $user_id = $_SESSION['user_id'];
-        $leaveHistory = $this->cutiModel->getLeaveHistory($user_id);
-
-        require_once __DIR__ . '/../views/cuti/leave_history.php';
-    }
-
     private function cmToPt($cm)
     {
         return $cm * 28.35;
@@ -666,40 +588,6 @@ class CutiController
         header("Content-Type: application/pdf");
         header("Content-Disposition: inline; filename=Formulir-Cuti.pdf");
         echo $pdfOutput;
-        exit;
-    }
-
-
-    public function hapusCuti()
-    {
-        if (!isset($_GET['id'])) {
-            $_SESSION['error'] = "ID tidak valid.";
-            header("Location: leave_history");
-            exit;
-        }
-
-        $id = $_GET['id'];
-        $status = $this->cutiModel->getStatusCuti($id);
-
-        if (!$status) {
-            $_SESSION['error'] = "Data tidak ditemukan!";
-            header("Location: leave_history");
-            exit;
-        }
-
-        if ($status['status'] === 'Disetujui' || $status['status'] === 'Ditolak') {
-            $_SESSION['error'] = "Data tidak bisa dihapus karena status sudah " . $status['status'];
-            header("Location: leave_history");
-            exit;
-        }
-
-        if ($this->cutiModel->delete($id)) {
-            $_SESSION['success'] = "Data berhasil dihapus!";
-        } else {
-            $_SESSION['error'] = "Gagal menghapus data.";
-        }
-        
-        header("Location: leave_history");
         exit;
     }
 }
